@@ -1,11 +1,19 @@
+use crate::VariableLengthInteger;
+use socket2::SockAddr;
 use std::io::IoSlice;
 use std::net::Shutdown;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use socket2::SockAddr;
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, ReadBuf};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::{ToSocketAddrs, UdpSocket};
-use crate::VariableLengthInteger;
+
+pub enum StreamType
+{
+    ClientInitiatedBidirectional  = 0x00,
+    ServerInitiatedBidirectional  = 0x01,
+    ClientInitiatedUnidirectional = 0x02,
+    ServerInitiatedUnidirectional = 0x03,
+}
 
 #[derive(Debug)]
 pub struct QuicStream
@@ -55,7 +63,7 @@ impl AsyncRead for QuicStream
 {
     fn poll_read(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<std::io::Result<()>>
     {
-        todo!()
+        self.udp_socket.poll_recv(cx, buf)
     }
 }
 
@@ -63,7 +71,7 @@ impl AsyncWrite for &QuicStream
 {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>>
     {
-        todo!()
+        self.udp_socket.poll_send(cx, buf)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>>
@@ -91,7 +99,7 @@ impl AsyncWrite for QuicStream
 {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<std::io::Result<usize>>
     {
-        todo!()
+        self.udp_socket.poll_send(cx, buf)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>>

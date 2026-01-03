@@ -1,6 +1,8 @@
 // This module contains the definitions for various types of frames that will be
 // used during by QUIC.
 
+use crate::VariableLengthInteger;
+
 pub enum FrameType
 {
     Padding = 0x00,
@@ -29,10 +31,45 @@ pub enum FrameType
     HandshakeDone = 0x1e,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum Frame
 {
-    Padding,
-    Ping,
+    Padding, // 0x00, No content
+    Ping,    // 0x01, No content
+    Ack  // 0x02
+    {
+        largest_acknowledged: VariableLengthInteger,
+        ack_delay:            VariableLengthInteger,  // Delay in microseconds (us).
+        ack_range_count:      VariableLengthInteger,  // Number of ACK range fields in the frame.
+        first_ack_range:      VariableLengthInteger,
+        ack_ranges:           Option<Vec<AckRange>>,  // Length of Vec given by ack_range_count field
+    },
+    AckWithECN  // 0x03
+    {
+        largest_acknowledged: VariableLengthInteger,
+        ack_delay:            VariableLengthInteger,  // Delay in microseconds (us).
+        ack_range_count:      VariableLengthInteger,  // Number of ACK range fields in the frame.
+        first_ack_range:      VariableLengthInteger,
+        ack_ranges:           Option<Vec<AckRange>>,  // Length of Vec given by ack_range_count field
+    },
+    ResetStream  // 0x04
+    {
+        stream_id: VariableLengthInteger,
 
+    },
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct AckRange
+{
+    gap:              VariableLengthInteger,
+    ack_range_length: VariableLengthInteger,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ECNCounts
+{
+    ect0_count:   VariableLengthInteger,
+    ect1_count:   VariableLengthInteger,
+    ecn_ce_count: VariableLengthInteger,
 }
