@@ -1,7 +1,7 @@
 // This module contains the definitions for various types of frames that will be
 // used during by QUIC.
 
-enum FrameType
+pub enum FrameType
 {
     Padding = 0x00,
     Ping = 0x01,
@@ -29,9 +29,10 @@ enum FrameType
     HandshakeDone = 0x1e,
 }
 
-
-
-enum Frame
+#[derive(Copy, Clone, Debug)]
+pub enum Frame
 {
-    
+    Padding,
+    Ping,
+
 }

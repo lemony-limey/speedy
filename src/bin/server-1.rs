@@ -16,7 +16,8 @@ struct Args
     port_number: u16,
 }
 
-fn main() -> std::io::Result<()>
+#[tokio::main]
+async fn main() -> std::io::Result<()>
 {
     // Parse the command-line arguments
     let args = Args::parse();
