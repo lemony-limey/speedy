@@ -1,5 +1,5 @@
 use crate::frames::Frame;
-use crate::VariableLengthInteger;
+use crate::variable_length_integer::VariableLengthInteger;
 
 #[derive(Clone, Debug)]
 struct LongHeader
@@ -21,7 +21,7 @@ struct ShortHeader
 }
 
 #[derive(Clone, Debug)]
-enum Packet
+pub enum Packet
 {
     VersionNegotiation
     {

@@ -1,7 +1,7 @@
 // This module contains the definitions for various types of frames that will be
 // used during by QUIC.
 
-use crate::VariableLengthInteger;
+use crate::variable_length_integer::VariableLengthInteger;
 
 pub enum FrameType
 {

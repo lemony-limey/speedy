@@ -1,4 +1,3 @@
-use crate::VariableLengthInteger;
 use socket2::SockAddr;
 use std::io::IoSlice;
 use std::net::Shutdown;
@@ -6,6 +5,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::{ToSocketAddrs, UdpSocket};
+use crate::variable_length_integer::VariableLengthInteger;
 
 pub enum StreamType
 {
