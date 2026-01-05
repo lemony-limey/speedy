@@ -1,8 +1,8 @@
 use anyhow::anyhow;
+use crate::variable_length_integer::encoded_u8::{VariableLengthEncodedU8, VARIABLE_LENGTH_U8_MAX};
 use crate::variable_length_integer::encoded_u16::{VariableLengthEncodedU16, VARIABLE_LENGTH_U16_MAX};
 use crate::variable_length_integer::encoded_u32::{VariableLengthEncodedU32, VARIABLE_LENGTH_U32_MAX};
 use crate::variable_length_integer::encoded_u64::{VariableLengthEncodedU64, VARIABLE_LENGTH_U64_MAX};
-use crate::variable_length_integer::encoded_u8::{VariableLengthEncodedU8, VARIABLE_LENGTH_U8_MAX};
 
 pub mod encoded_u8;
 pub mod encoded_u16;
@@ -28,9 +28,6 @@ pub mod encoded_u64;
 /// u indicates an unsigned integer and X is the number of bits, 8, 16, 32 or 64 here)
 /// is 2^(X - 2) - 1.
 ///
-/// TODO: Swapping between the encoded and raw values is an absolute pain.
-///     Separate structs for each?
-///
 /// We require the enum rather than a generic struct because of the edge case that sufficiently
 /// large values may not fit into the data type with 2 fewer bits (i.e. 255 for u8 does not fit
 /// into 6 bits).
@@ -55,9 +52,9 @@ impl TryFrom<u8> for VariableLengthInteger
     {
         if value <= VARIABLE_LENGTH_U8_MAX
         {
-            // No bit mask necessary here, as first two bits must be "00" to be
-            // within the allowed size anyway.
-            Ok(VariableLengthInteger::EightBit(value))
+            Ok(VariableLengthInteger::EightBit(
+                VariableLengthEncodedU8::try_new_from_decoded_value(value)?
+            ))
         }
         else  // Requires a u32
         {
@@ -72,7 +69,7 @@ impl TryFrom<u16> for VariableLengthInteger
 {
     type Error = anyhow::Error;
 
-    fn try_from(mut value: u16) -> Result<Self, Self::Error>
+    fn try_from(value: u16) -> Result<Self, Self::Error>
     {
         if value <= VARIABLE_LENGTH_U8_MAX as u16
         {
@@ -80,7 +77,9 @@ impl TryFrom<u16> for VariableLengthInteger
         }
         else if value <= VARIABLE_LENGTH_U16_MAX
         {
-            Ok(VariableLengthInteger::SixteenBit(value))
+            Ok(VariableLengthInteger::SixteenBit(
+                VariableLengthEncodedU16::try_new_from_decoded_value(value)?
+            ))
         }
         else  // Requires a u32
         {
@@ -95,7 +94,7 @@ impl TryFrom<u32> for VariableLengthInteger
 {
     type Error = anyhow::Error;
 
-    fn try_from(mut value: u32) -> Result<Self, Self::Error>
+    fn try_from(value: u32) -> Result<Self, Self::Error>
     {
         if value <= VARIABLE_LENGTH_U8_MAX as u32
         {
@@ -108,11 +107,9 @@ impl TryFrom<u32> for VariableLengthInteger
         else if value <= VARIABLE_LENGTH_U32_MAX
         {
             // The 2 most significant bits are set to "10"
-            Ok(
-                VariableLengthInteger::ThirtyTwoBit(
-                    VariableLengthEncodedU32::try_new_from_decoded_value(value)?
-                )
-            )
+            Ok(VariableLengthInteger::ThirtyTwoBit(
+                VariableLengthEncodedU32::try_new_from_decoded_value(value)?
+            ))
         }
         else  // Requires a u64
         {
@@ -127,7 +124,7 @@ impl TryFrom<u64> for VariableLengthInteger
 {
     type Error = anyhow::Error;
 
-    fn try_from(mut value: u64) -> Result<Self, Self::Error>
+    fn try_from(value: u64) -> Result<Self, Self::Error>
     {
         if value <= VARIABLE_LENGTH_U8_MAX as u64
         {
@@ -143,40 +140,29 @@ impl TryFrom<u64> for VariableLengthInteger
         }
         else if value <= VARIABLE_LENGTH_U64_MAX
         {
-            Ok(VariableLengthInteger::SixtyFourBit(value))
+            Ok(VariableLengthInteger::SixtyFourBit(
+                VariableLengthEncodedU64::try_new_from_decoded_value(value)?
+            ))
         }
         else  // Too large to be stored as a QUIC variable-length integer.
         {
-            Err(
-                anyhow!(
-                    "Cannot store {} as a variable-length integer, as it it larger than \
+            Err(anyhow!(
+                "Cannot store {} as a variable-length integer, as it it larger than \
                     the maximum accepted value: {}",
-                    value,
-                    VARIABLE_LENGTH_U64_MAX,
-                )
-            )
+                value,
+                VARIABLE_LENGTH_U64_MAX,
+            ))
         }
     }
 }
 
 
-/// TODO: Just an idea at the moment.
-pub trait VariableLengthEncoder
+/// Defines the interface that all variable length integer types must conform to.
+/// This makes it easier to work with these types, since it is known that regardless of the size
+/// of the current value, the operations that can be performed are the same.
+pub trait VariableLengthEncodeDecode<T>
 {
-    type Value;
-    type Error;
-
-    fn encode_with_variable_length(value: Self::Value) -> Result<VariableLengthInteger, Self::Error>;
-}
-
-
-/// TODO: Just an idea at the moment.
-pub trait VariableLengthCrap<T>
-{
-    type VariableLengthVariant;
-    type Error;
-
-    fn try_new_from_decoded_value(decoded_value: T) -> Result<Self::VariableLengthVariant, Self::Error>;
+    fn try_new_from_decoded_value(decoded_value: T) -> anyhow::Result<Self> where Self: Sized;
     fn new_from_encoded_value(encoded_value: T) -> Self;
     fn decoded_value(&self) -> T;
     fn encoded_value(&self) -> T;
@@ -187,16 +173,19 @@ pub trait VariableLengthCrap<T>
 mod tests
 {
     use anyhow::anyhow;
+    use crate::variable_length_integer::{VariableLengthEncodeDecode, VariableLengthInteger};
     use crate::variable_length_integer::encoded_u8::VARIABLE_LENGTH_U8_MAX;
-    use crate::variable_length_integer::VariableLengthInteger;
+    use crate::variable_length_integer::encoded_u16::{VARIABLE_LENGTH_U16_BIT_SETTING_MASK, VARIABLE_LENGTH_U16_MAX};
+    use crate::variable_length_integer::encoded_u32::{VARIABLE_LENGTH_U32_BIT_SETTING_MASK, VARIABLE_LENGTH_U32_MAX};
+    use crate::variable_length_integer::encoded_u64::{VARIABLE_LENGTH_U64_BIT_SETTING_MASK, VARIABLE_LENGTH_U64_MAX};
 
     #[test]
-    fn test_valid_u8_conversion() -> anyhow::Result<()>
+    fn test_valid_u8_conversion_decoded() -> anyhow::Result<()>
     {
         let zero = 0u8;
         let ten = 10u8;
         let six_bit_max = VARIABLE_LENGTH_U8_MAX;
-        let gt_six_bit_max = VARIABLE_LENGTH_U8_MAX + 1;
+        let greater_than_six_bit_max = VARIABLE_LENGTH_U8_MAX + 1;
 
         let VariableLengthInteger::EightBit(from_zero) = VariableLengthInteger::try_from(zero)? else {
             return Err(anyhow!("oh no!"))
@@ -207,49 +196,306 @@ mod tests
         let VariableLengthInteger::EightBit(from_six_bit_max) = VariableLengthInteger::try_from(six_bit_max)? else {
             return Err(anyhow!("oh no!"))
         };
-        let VariableLengthInteger::SixteenBit(from_gt_six_bit_max) = VariableLengthInteger::try_from(gt_six_bit_max)? else {
+        let VariableLengthInteger::SixteenBit(from_gt_six_bit_max) = VariableLengthInteger::try_from(greater_than_six_bit_max)? else {
             return Err(anyhow!("oh no!"))
         };
 
-        assert_eq!(
-            zero,
-            from_zero.decoded_value(),
-        );
+        assert_eq!(zero, from_zero.decoded_value());
+        assert_eq!(zero, from_zero.encoded_value());
 
-        assert_eq!(
-            ten,
-            from_ten.decoded_value(),
-        );
+        assert_eq!(ten, from_ten.decoded_value());
+        assert_eq!(ten, from_ten.encoded_value());
 
-        assert_eq!(
-            six_bit_max,
-            from_six_bit_max.decoded_value(),
-        );
+        assert_eq!(six_bit_max, from_six_bit_max.decoded_value());
+        assert_eq!(six_bit_max, from_six_bit_max.encoded_value());
 
         // The value greater than the six bit max should be converted to a u16.
+        assert_eq!(greater_than_six_bit_max as u16, from_gt_six_bit_max.decoded_value());
         assert_eq!(
-            gt_six_bit_max as u16,
-            from_gt_six_bit_max.decoded_value(),
+            greater_than_six_bit_max as u16 | VARIABLE_LENGTH_U16_BIT_SETTING_MASK,
+            from_gt_six_bit_max.encoded_value(),
         );
 
         Ok(())
     }
 
-    #[test]
-    fn test_valid_u16_conversion()
-    {
 
+    #[test]
+    fn test_valid_u16_conversion_decoded() -> anyhow::Result<()>
+    {
+        let zero = 0u16;
+        let ten = 10u16;
+        let greater_than_six_bit_max = (VARIABLE_LENGTH_U8_MAX + 1) as u16;
+        let fourteen_bit_max = VARIABLE_LENGTH_U16_MAX;
+        let greater_than_fourteen_bit_max = VARIABLE_LENGTH_U16_MAX + 1;
+
+        // Even though zero and ten are u16 values, they will be converted to
+        // VariableLengthEncodedU8s, as this will save space.
+        let VariableLengthInteger::EightBit(from_zero) = VariableLengthInteger::try_from(zero)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::EightBit(from_ten) = VariableLengthInteger::try_from(ten)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::SixteenBit(from_gt_six_bit_max) = VariableLengthInteger::try_from(greater_than_six_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::SixteenBit(from_fourteen_bit_max) = VariableLengthInteger::try_from(fourteen_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::ThirtyTwoBit(from_gt_fourteen_bit_max) = VariableLengthInteger::try_from(greater_than_fourteen_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+
+        // 0 and 10 will both become VariableLengthEncodedU8s because using 14 bits to store
+        // these values is excessive.
+        assert_eq!(zero as u8, from_zero.decoded_value());
+        assert_eq!(zero as u8, from_zero.encoded_value());
+        assert_eq!(ten as u8, from_ten.decoded_value());
+        assert_eq!(ten as u8, from_ten.encoded_value());
+
+        // 64 will need to become a VariableLengthEncodedU16 as 6 bits is not sufficient to
+        // represent this value, so 14 bits must be used instead.
+        assert_eq!(
+            greater_than_six_bit_max,
+            from_gt_six_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            greater_than_six_bit_max | VARIABLE_LENGTH_U16_BIT_SETTING_MASK,
+            from_gt_six_bit_max.encoded_value(),
+        );
+
+        assert_eq!(
+            fourteen_bit_max,
+            from_fourteen_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            fourteen_bit_max | VARIABLE_LENGTH_U16_BIT_SETTING_MASK,
+            from_fourteen_bit_max.encoded_value(),
+        );
+
+        // The value greater than the fourteen bit max should be converted to a u32.
+        assert_eq!(
+            greater_than_fourteen_bit_max as u32,
+            from_gt_fourteen_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            greater_than_fourteen_bit_max as u32 | VARIABLE_LENGTH_U32_BIT_SETTING_MASK,
+            from_gt_fourteen_bit_max.encoded_value(),
+        );
+
+        Ok(())
     }
 
-    #[test]
-    fn test_valid_u32_conversion()
-    {
 
+    #[test]
+    fn test_valid_u32_conversion_decoded() -> anyhow::Result<()>
+    {
+        let zero = 0u32;
+        let ten = 10u32;
+        let greater_than_six_bit_max = (VARIABLE_LENGTH_U8_MAX + 1) as u32;
+        let fourteen_bit_max = VARIABLE_LENGTH_U16_MAX as u32;
+        let greater_than_fourteen_bit_max = (VARIABLE_LENGTH_U16_MAX + 1) as u32;
+        let thirty_bit_max = VARIABLE_LENGTH_U32_MAX;
+        let greater_than_thirty_bit_max = VARIABLE_LENGTH_U32_MAX + 1;
+
+        // Even though zero and ten are u16 values, they will be converted to
+        // VariableLengthEncodedU8s, as this will save space.
+        let VariableLengthInteger::EightBit(from_zero) = VariableLengthInteger::try_from(zero)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::EightBit(from_ten) = VariableLengthInteger::try_from(ten)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::SixteenBit(from_gt_six_bit_max) = VariableLengthInteger::try_from(greater_than_six_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::SixteenBit(from_fourteen_bit_max) = VariableLengthInteger::try_from(fourteen_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::ThirtyTwoBit(from_gt_fourteen_bit_max) = VariableLengthInteger::try_from(greater_than_fourteen_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::ThirtyTwoBit(from_thirty_bit_max) = VariableLengthInteger::try_from(thirty_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::SixtyFourBit(from_gt_thirty_bit_max) = VariableLengthInteger::try_from(greater_than_thirty_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+
+        // 0 and 10 will both become VariableLengthEncodedU8s because using 14 bits to store
+        // these values is excessive.
+        assert_eq!(zero as u8, from_zero.decoded_value());
+        assert_eq!(zero as u8, from_zero.encoded_value());
+        assert_eq!(ten as u8, from_ten.decoded_value());
+        assert_eq!(ten as u8, from_ten.encoded_value());
+
+        // 64 will need to become a VariableLengthEncodedU16 as 6 bits is not sufficient to
+        // represent this value, so 14 bits must be used instead.
+        assert_eq!(
+            greater_than_six_bit_max as u16,
+            from_gt_six_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            greater_than_six_bit_max as u16 | VARIABLE_LENGTH_U16_BIT_SETTING_MASK,
+            from_gt_six_bit_max.encoded_value(),
+        );
+
+        assert_eq!(
+            fourteen_bit_max as u16,
+            from_fourteen_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            fourteen_bit_max as u16 | VARIABLE_LENGTH_U16_BIT_SETTING_MASK,
+            from_fourteen_bit_max.encoded_value(),
+        );
+
+        // 64 and 1_073_741_823 should be converted to u32s.
+        assert_eq!(
+            greater_than_fourteen_bit_max,
+            from_gt_fourteen_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            greater_than_fourteen_bit_max | VARIABLE_LENGTH_U32_BIT_SETTING_MASK,
+            from_gt_fourteen_bit_max.encoded_value(),
+        );
+
+        assert_eq!(
+            thirty_bit_max,
+            from_thirty_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            thirty_bit_max | VARIABLE_LENGTH_U32_BIT_SETTING_MASK,
+            from_thirty_bit_max.encoded_value(),
+        );
+
+        // 1_073_741_824 must be converted to a u64.
+        assert_eq!(
+            greater_than_thirty_bit_max as u64,
+            from_gt_thirty_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            greater_than_thirty_bit_max as u64 | VARIABLE_LENGTH_U64_BIT_SETTING_MASK,
+            from_gt_thirty_bit_max.encoded_value(),
+        );
+
+        Ok(())
     }
 
-    #[test]
-    fn test_valid_u64_conversion()
-    {
 
+    #[test]
+    fn test_valid_u64_conversion_decoded() -> anyhow::Result<()>
+    {
+        let zero = 0u64;
+        let ten = 10u64;
+        let greater_than_six_bit_max = (VARIABLE_LENGTH_U8_MAX + 1) as u64;
+        let fourteen_bit_max = VARIABLE_LENGTH_U16_MAX as u64;
+        let greater_than_fourteen_bit_max = (VARIABLE_LENGTH_U16_MAX + 1) as u64;
+        let thirty_bit_max = VARIABLE_LENGTH_U32_MAX as u64;
+        let greater_than_thirty_bit_max = (VARIABLE_LENGTH_U32_MAX + 1) as u64;
+        let sixty_two_bit_max = VARIABLE_LENGTH_U64_MAX;
+        let greater_than_sixty_two_bit_max = VARIABLE_LENGTH_U64_MAX + 1;
+
+        // Even though zero and ten are u16 values, they will be converted to
+        // VariableLengthEncodedU8s, as this will save space.
+        let VariableLengthInteger::EightBit(from_zero) = VariableLengthInteger::try_from(zero)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::EightBit(from_ten) = VariableLengthInteger::try_from(ten)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::SixteenBit(from_gt_six_bit_max) = VariableLengthInteger::try_from(greater_than_six_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::SixteenBit(from_fourteen_bit_max) = VariableLengthInteger::try_from(fourteen_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::ThirtyTwoBit(from_gt_fourteen_bit_max) = VariableLengthInteger::try_from(greater_than_fourteen_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::ThirtyTwoBit(from_thirty_bit_max) = VariableLengthInteger::try_from(thirty_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::SixtyFourBit(from_gt_thirty_bit_max) = VariableLengthInteger::try_from(greater_than_thirty_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        let VariableLengthInteger::SixtyFourBit(from_sixty_two_bit_max) = VariableLengthInteger::try_from(sixty_two_bit_max)? else {
+            return Err(anyhow!("oh no!"))
+        };
+        // Attempting to convert a number that doesn't fit within 62 bits into a
+        // VariableLengthEncodedU64 should return an error.
+        let Err(_) = VariableLengthInteger::try_from(greater_than_sixty_two_bit_max) else {
+            return Err(anyhow!("oh no!"))
+        };
+
+        // 0 and 10 will both become VariableLengthEncodedU8s because using 14 bits to store
+        // these values is excessive.
+        assert_eq!(zero as u8, from_zero.decoded_value());
+        assert_eq!(zero as u8, from_zero.encoded_value());
+        assert_eq!(ten as u8, from_ten.decoded_value());
+        assert_eq!(ten as u8, from_ten.encoded_value());
+
+        // 64 will need to become a VariableLengthEncodedU16 as 6 bits is not sufficient to
+        // represent this value, so 14 bits must be used instead.
+        assert_eq!(
+            greater_than_six_bit_max as u16,
+            from_gt_six_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            greater_than_six_bit_max as u16 | VARIABLE_LENGTH_U16_BIT_SETTING_MASK,
+            from_gt_six_bit_max.encoded_value(),
+        );
+
+        assert_eq!(
+            fourteen_bit_max as u16,
+            from_fourteen_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            fourteen_bit_max as u16 | VARIABLE_LENGTH_U16_BIT_SETTING_MASK,
+            from_fourteen_bit_max.encoded_value(),
+        );
+
+        // 64 and 1_073_741_823 should be converted to u32s.
+        assert_eq!(
+            greater_than_fourteen_bit_max as u32,
+            from_gt_fourteen_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            greater_than_fourteen_bit_max as u32 | VARIABLE_LENGTH_U32_BIT_SETTING_MASK,
+            from_gt_fourteen_bit_max.encoded_value(),
+        );
+
+        assert_eq!(
+            thirty_bit_max as u32,
+            from_thirty_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            thirty_bit_max as u32 | VARIABLE_LENGTH_U32_BIT_SETTING_MASK,
+            from_thirty_bit_max.encoded_value(),
+        );
+
+        // 1_073_741_824 must be converted to a u64. It is the smallest value that a
+        // VariableLengthEncodedU64 should contain, as any smaller value should fit into
+        // fewer bits.
+        assert_eq!(
+            greater_than_thirty_bit_max,
+            from_gt_thirty_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            greater_than_thirty_bit_max | VARIABLE_LENGTH_U64_BIT_SETTING_MASK,
+            from_gt_thirty_bit_max.encoded_value(),
+        );
+
+        // The largest value that can fit into a VariableLengthEncodedU64.
+        assert_eq!(
+            sixty_two_bit_max,
+            from_sixty_two_bit_max.decoded_value(),
+        );
+        assert_eq!(
+            sixty_two_bit_max | VARIABLE_LENGTH_U64_BIT_SETTING_MASK,
+            from_sixty_two_bit_max.encoded_value(),
+        );
+
+        Ok(())
     }
 }
