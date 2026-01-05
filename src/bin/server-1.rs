@@ -1,10 +1,9 @@
+use clap::Parser;
 use std::net::{
     Ipv4Addr,
-    ToSocketAddrs,
     UdpSocket,
 };
 use std::str::from_utf8;
-use clap::Parser;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]

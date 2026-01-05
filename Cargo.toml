@@ -3,6 +3,12 @@ name = "speedy"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "client-1"
+
+[[bin]]
+name = "server-1"
+
 [dependencies]
 anyhow = "1.0.100"
 bytes = "1.11.0"
