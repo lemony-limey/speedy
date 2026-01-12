@@ -2,16 +2,15 @@ use crate::frame::FrameType;
 use crate::quic_stream::StreamID;
 use crate::variable_length_integer::VariableLengthInteger;
 
-/// Can be sent for streams in the "Recv" state.
-#[derive(Clone, Debug)]
-pub struct MaxStreamData
+#[derive(Clone, Copy, Debug)]
+pub struct StreamDataBlocked
 {
     frame_type:          VariableLengthInteger,
     stream_id:           StreamID,
     maximum_stream_data: VariableLengthInteger,
 }
 
-impl MaxStreamData
+impl StreamDataBlocked
 {
     pub fn new(
         stream_id:           StreamID,
@@ -19,7 +18,7 @@ impl MaxStreamData
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::MaxStreamData),
+            frame_type: VariableLengthInteger::from(FrameType::StreamDataBlocked),
             stream_id,
             maximum_stream_data,
         }

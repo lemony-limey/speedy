@@ -1,34 +1,57 @@
 // This module contains the definitions for various types of frames that will be
 // used during by QUIC.
 
-use bytes::Bytes;
 use crate::frame::ack::Ack;
 use crate::frame::ack_with_ecn::AckWithECN;
+use crate::frame::connection_close_application_error::ConnectionCloseApplicationError;
+use crate::frame::connection_close_success_or_quic_error::ConnectionCloseSuccessOrQuicError;
 use crate::frame::crypto::Crypto;
+use crate::frame::data_blocked::DataBlocked;
+use crate::frame::handshake_done::HandshakeDone;
 use crate::frame::max_data::MaxData;
 use crate::frame::max_stream_data::MaxStreamData;
+use crate::frame::max_streams_bidirectional::MaxStreamsBidirectional;
+use crate::frame::max_streams_unidirectional::MaxStreamsUnidirectional;
+use crate::frame::new_connection_id::NewConnectionID;
 use crate::frame::new_token::NewToken;
 use crate::frame::padding::Padding;
+use crate::frame::path_challenge::PathChallenge;
+use crate::frame::path_response::PathResponse;
 use crate::frame::ping::Ping;
 use crate::frame::reset_stream::ResetStream;
+use crate::frame::retire_connection_id::RetireConnectionID;
 use crate::frame::stop_sending::StopSending;
 use crate::frame::stream::Stream;
-use crate::quic_stream::StreamID;
-use crate::variable_length_integer::VariableLengthInteger;
+use crate::frame::stream_data_blocked::StreamDataBlocked;
+use crate::frame::streams_blocked_bidirectional::StreamsBlockedBidirectional;
+use crate::frame::streams_blocked_unidirectional::StreamsBlockedUnidirectional;
 
 pub mod ack;
 pub mod ack_with_ecn;
+pub mod connection_close_success_or_quic_error;
+pub mod connection_close_application_error;
 pub mod crypto;
+pub mod data_blocked;
 pub mod handshake_done;
 pub mod max_data;
 pub mod max_stream_data;
+pub mod max_streams_bidirectional;
+pub mod max_streams_unidirectional;
+pub mod new_connection_id;
 pub mod new_token;
 pub mod padding;
+pub mod path_challenge;
+pub mod path_response;
 pub mod ping;
 pub mod reset_stream;
+pub mod retire_connection_id;
 pub mod stop_sending;
 pub mod stream;
+pub mod streams_blocked_bidirectional;
+pub mod streams_blocked_unidirectional;
+pub mod stream_data_blocked;
 
+#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum FrameType
 {
     Padding = 0x00,
@@ -61,7 +84,7 @@ pub enum FrameType
     RetireConnectionID = 0x19,
     PathChallenge = 0x1a,
     PathResponse = 0x1b,
-    ConnectionCloseNoErrorOrQuicError = 0x1c,
+    ConnectionCloseSuccessOrQuicError = 0x1c,
     ConnectionCloseApplicationError = 0x1d,
     HandshakeDone = 0x1e,
 }
@@ -75,85 +98,22 @@ pub enum Frame
     AckWithECN(AckWithECN),
     ResetStream(ResetStream),
     StopSending(StopSending),
-    // Crypto frames CANNOT be sent in 0-RTT packets.
     Crypto(Crypto),
     NewToken(NewToken),
     Stream(Stream),
     MaxData(MaxData),
-    // Can be sent for streams in the "Recv" state.
     MaxStreamData(MaxStreamData),
-    // MaxStreamsBidirectional represents the count of the cumulative number of [bidirectional]
-    // streams ... that can be opened over the lifetime of the connection (RFC 9000, Section 19.11).
-    MaxStreamsBidirectional  // type: 0x12
-    {
-        maximum_streams: VariableLengthInteger,
-    },
-    // MaxStreamsUnidirectional represents the count of the cumulative number of [unidirectional]
-    // streams ... that can be opened over the lifetime of the connection (RFC 9000, Section 19.11).
-    MaxStreamsUnidirectional  // type: 0x13
-    {
-        maximum_streams: VariableLengthInteger,
-    },
-    DataBlocked  // type: 0x14
-    {
-        // The connection-level limit at which blocking occurred.
-        maximum_data: VariableLengthInteger,
-    },
-    StreamDataBlocked  // type: 0x15
-    {
-        stream_id:           StreamID,
-        maximum_stream_data: VariableLengthInteger,
-    },
-    StreamsBlockedBidirectional  // type: 0x16
-    {
-        maximum_streams: VariableLengthInteger,
-    },
-    StreamsBlockedUnidirectional  // type: 0x17
-    {
-        maximum_streams: VariableLengthInteger,
-    },
-    NewConnectionID  // type: 0x18
-    {
-        sequence_number:       VariableLengthInteger,
-        retire_prior_to:       VariableLengthInteger,
-        length:                u8,
-        connection_id:         Bytes,  // At most 20 bytes
-        stateless_reset_token: u128,
-    },
-    RetireConnectionID  // type: 0x19
-    {
-        sequence_number: VariableLengthInteger,
-    },
-    // Used to check reachability to the peer and for path validation during connection migration.
-    // (RFC 9000, Section 19.17).
-    PathChallenge  // type: 0x1a
-    {
-        data: u64,
-    },
-    PathResponse  // type: 0x1b
-    {
-        data: u64,
-    },
-    ConnectionCloseNoErrorOrQuicError  // type: 0x1c
-    {
-        error_code:           VariableLengthInteger,
-        frame_type:           Option<VariableLengthInteger>,
-        reason_phrase_length: VariableLengthInteger,
-        reason_phrase:        Bytes,
-    },
-    ConnectionCloseApplicationError  // type: 0x1d
-    {
-        error_code:           VariableLengthInteger,
-        frame_type:           Option<VariableLengthInteger>,
-        reason_phrase_length: VariableLengthInteger,
-        reason_phrase:        Bytes,
-    },
-    HandshakeDone,  // type: 0x1e
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct AckRange
-{
-    gap:              VariableLengthInteger,
-    ack_range_length: VariableLengthInteger,
+    MaxStreamsBidirectional(MaxStreamsBidirectional),
+    MaxStreamsUnidirectional(MaxStreamsUnidirectional),
+    DataBlocked(DataBlocked),
+    StreamDataBlocked(StreamDataBlocked),
+    StreamsBlockedBidirectional(StreamsBlockedBidirectional),
+    StreamsBlockedUnidirectional(StreamsBlockedUnidirectional),
+    NewConnectionID(NewConnectionID),
+    RetireConnectionID(RetireConnectionID),
+    PathChallenge(PathChallenge),
+    PathResponse(PathResponse),
+    ConnectionCloseSuccessOrQuicError(ConnectionCloseSuccessOrQuicError),
+    ConnectionCloseApplicationError(ConnectionCloseApplicationError),
+    HandshakeDone(HandshakeDone),  // type: 0x1e
 }

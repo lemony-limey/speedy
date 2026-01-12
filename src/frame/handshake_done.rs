@@ -1,6 +1,7 @@
 use crate::frame::FrameType;
 use crate::variable_length_integer::VariableLengthInteger;
 
+#[derive(Clone, Copy, Debug)]
 pub struct HandshakeDone
 {
     frame_type: VariableLengthInteger,

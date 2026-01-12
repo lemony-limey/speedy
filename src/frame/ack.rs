@@ -1,4 +1,4 @@
-use crate::frame::{AckRange, FrameType};
+use crate::frame::FrameType;
 use crate::variable_length_integer::VariableLengthInteger;
 
 #[derive(Clone, Debug)]
@@ -32,4 +32,11 @@ impl Ack
             ack_ranges,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct AckRange
+{
+    gap:              VariableLengthInteger,
+    ack_range_length: VariableLengthInteger,
 }
