@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use crate::variable_length_integer::VariableLengthEncodeDecode;
+use crate::variable_length_integer::{VariableLengthDecode, VariableLengthEncode};
 
 /// The largest value that can be stored in an instance of VariableLengthInteger::SixteenBit
 /// Anything larger than this value must be stored with a u32.
@@ -18,7 +18,7 @@ pub struct VariableLengthEncodedU16
 }
 
 
-impl VariableLengthEncodeDecode<u16> for VariableLengthEncodedU16
+impl VariableLengthEncode<u16> for VariableLengthEncodedU16
 {
     fn try_new_from_decoded_value(decoded_value: u16) -> anyhow::Result<Self>
     {
@@ -38,6 +38,14 @@ impl VariableLengthEncodeDecode<u16> for VariableLengthEncodedU16
         Ok( Self { decoded_value, encoded_value } )
     }
 
+    fn encoded_value(&self) -> u16
+    {
+        self.encoded_value
+    }
+}
+
+impl VariableLengthDecode<u16> for VariableLengthEncodedU16
+{
     fn new_from_encoded_value(encoded_value: u16) -> Self
     {
         let decoded_value = encoded_value & VARIABLE_LENGTH_U16_BIT_CLEARING_MASK;
@@ -48,10 +56,5 @@ impl VariableLengthEncodeDecode<u16> for VariableLengthEncodedU16
     fn decoded_value(&self) -> u16
     {
         self.decoded_value
-    }
-
-    fn encoded_value(&self) -> u16
-    {
-        self.encoded_value
     }
 }

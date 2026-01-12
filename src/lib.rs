@@ -1,4 +1,4 @@
-mod frames;
+mod frame;
 mod packets;
 mod parser;
 pub mod quic_connection;

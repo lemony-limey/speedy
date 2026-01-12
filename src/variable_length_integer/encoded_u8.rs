@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use crate::variable_length_integer::VariableLengthEncodeDecode;
+use crate::variable_length_integer::{VariableLengthDecode, VariableLengthEncode};
 
 /// The largest value that can be stored in an instance of VariableLengthInteger::EightBit.
 /// Anything larger than this value must be stored with a u16.
@@ -16,7 +16,7 @@ pub struct VariableLengthEncodedU8
 }
 
 
-impl VariableLengthEncodeDecode<u8> for VariableLengthEncodedU8
+impl VariableLengthEncode<u8> for VariableLengthEncodedU8
 {
     fn try_new_from_decoded_value(decoded_value: u8) -> anyhow::Result<Self>
     {
@@ -34,6 +34,16 @@ impl VariableLengthEncodeDecode<u8> for VariableLengthEncodedU8
         Ok( Self { value: decoded_value } )
     }
 
+    /// For the u8 variant, this method and the `decoded_value()` method will return the exact
+    /// same value.
+    fn encoded_value(&self) -> u8
+    {
+        self.value
+    }
+}
+
+impl VariableLengthDecode<u8> for VariableLengthEncodedU8
+{
     fn new_from_encoded_value(encoded_value: u8) -> Self
     {
         Self { value: encoded_value }
@@ -42,13 +52,6 @@ impl VariableLengthEncodeDecode<u8> for VariableLengthEncodedU8
     /// For the u8 variant, this method and the `encoded_value()` method will return the exact
     /// same value.
     fn decoded_value(&self) -> u8
-    {
-        self.value
-    }
-
-    /// For the u8 variant, this method and the `decoded_value()` method will return the exact
-    /// same value.
-    fn encoded_value(&self) -> u8
     {
         self.value
     }

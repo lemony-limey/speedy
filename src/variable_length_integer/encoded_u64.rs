@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use crate::variable_length_integer::VariableLengthEncodeDecode;
+use crate::variable_length_integer::{VariableLengthDecode, VariableLengthEncode};
 
 /// The largest value that can be stored in an instance of VariableLengthInteger::SixtyFourBit
 /// Anything larger than this value must be stored with a u128, but this is not supported
@@ -19,7 +19,7 @@ pub struct VariableLengthEncodedU64
 }
 
 
-impl VariableLengthEncodeDecode<u64> for VariableLengthEncodedU64
+impl VariableLengthEncode<u64> for VariableLengthEncodedU64
 {
     /// If a value is too large, this method will return Err.
     fn try_new_from_decoded_value(decoded_value: u64) -> anyhow::Result<Self>
@@ -40,6 +40,14 @@ impl VariableLengthEncodeDecode<u64> for VariableLengthEncodedU64
         Ok( Self { decoded_value, encoded_value } )
     }
 
+    fn encoded_value(&self) -> u64
+    {
+        self.encoded_value
+    }
+}
+
+impl VariableLengthDecode<u64> for VariableLengthEncodedU64
+{
     fn new_from_encoded_value(encoded_value: u64) -> Self
     {
         let decoded_value = encoded_value & VARIABLE_LENGTH_U64_BIT_CLEARING_MASK;
@@ -50,10 +58,5 @@ impl VariableLengthEncodeDecode<u64> for VariableLengthEncodedU64
     fn decoded_value(&self) -> u64
     {
         self.decoded_value
-    }
-
-    fn encoded_value(&self) -> u64
-    {
-        self.encoded_value
     }
 }

@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use crate::frame::FrameType;
 use crate::variable_length_integer::encoded_u8::{VariableLengthEncodedU8, VARIABLE_LENGTH_U8_MAX};
 use crate::variable_length_integer::encoded_u16::{VariableLengthEncodedU16, VARIABLE_LENGTH_U16_MAX};
 use crate::variable_length_integer::encoded_u32::{VariableLengthEncodedU32, VARIABLE_LENGTH_U32_MAX};
@@ -44,78 +45,83 @@ pub enum VariableLengthInteger
 }
 
 
-impl TryFrom<u8> for VariableLengthInteger
+impl From<u8> for VariableLengthInteger
 {
-    type Error = anyhow::Error;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error>
+    fn from(value: u8) -> Self
     {
         if value <= VARIABLE_LENGTH_U8_MAX
         {
-            Ok(VariableLengthInteger::EightBit(
-                VariableLengthEncodedU8::try_new_from_decoded_value(value)?
-            ))
+            // SAFETY: This branch can only be reached if the value is small enough to be converted
+            //      without loss of information, so this conversion is infallible.
+            VariableLengthInteger::EightBit(
+                VariableLengthEncodedU8::try_new_from_decoded_value(value)
+                    .expect("VariableLengthInteger From<u8> as u8: This conversion should be infallible")
+            )
         }
         else  // Requires a u32
         {
             // SAFETY: This call is guaranteed to succeed, because an 8-bit value
             // will always fit into 14 bits.
-            Self::try_from(value as u16)
+            Self::from(value as u16)
         }
     }
 }
 
-impl TryFrom<u16> for VariableLengthInteger
+impl From<u16> for VariableLengthInteger
 {
-    type Error = anyhow::Error;
-
-    fn try_from(value: u16) -> Result<Self, Self::Error>
+    fn from(value: u16) -> Self
     {
         if value <= VARIABLE_LENGTH_U8_MAX as u16
         {
-            Self::try_from(value as u8)
+            Self::from(value as u8)
         }
         else if value <= VARIABLE_LENGTH_U16_MAX
         {
-            Ok(VariableLengthInteger::SixteenBit(
-                VariableLengthEncodedU16::try_new_from_decoded_value(value)?
-            ))
+            // SAFETY: This branch can only be reached if the value is small enough to be converted
+            //      without loss of information, so this conversion is infallible.
+            VariableLengthInteger::SixteenBit(
+                VariableLengthEncodedU16::try_new_from_decoded_value(value)
+                    .expect("VariableLengthInteger From<u16> as u16: This conversion should be infallible")
+            )
         }
         else  // Requires a u32
         {
             // SAFETY: This call is guaranteed to succeed, because a 16-bit value
             // will always fit into 30 bits.
             Self::try_from(value as u32)
+                .expect("VariableLengthInteger From<u16> as u32: This conversion should be infallible")
         }
     }
 }
 
-impl TryFrom<u32> for VariableLengthInteger
+impl From<u32> for VariableLengthInteger
 {
-    type Error = anyhow::Error;
-
-    fn try_from(value: u32) -> Result<Self, Self::Error>
+    fn from(value: u32) -> Self
     {
         if value <= VARIABLE_LENGTH_U8_MAX as u32
         {
-            Self::try_from(value as u8)
+            Self::from(value as u8)
         }
         else if value <= VARIABLE_LENGTH_U16_MAX as u32
         {
-            Self::try_from(value as u16)
+            Self::from(value as u16)
         }
         else if value <= VARIABLE_LENGTH_U32_MAX
         {
             // The 2 most significant bits are set to "10"
-            Ok(VariableLengthInteger::ThirtyTwoBit(
-                VariableLengthEncodedU32::try_new_from_decoded_value(value)?
-            ))
+            // SAFETY: This branch can only be reached if the value is small enough to be converted
+            //      without loss of information, so this conversion is infallible.
+            VariableLengthInteger::ThirtyTwoBit(
+                VariableLengthEncodedU32::try_new_from_decoded_value(value)
+                    .expect("VariableLengthInteger From<u32> as u32: This conversion should be infallible")
+            )
         }
         else  // Requires a u64
         {
-            // SAFETY: This call is guaranteed to succeed, because a 32-bit value
-            // will always fit into 62 bits.
+            // SAFETY: This conversion is infallible, because a 32-bit value
+            //      will always fit into 62 bits.
             Self::try_from(value as u64)
+                .expect("VariableLengthInteger From<u32> as u64: This conversion should be infallible")
         }
     }
 }
@@ -128,15 +134,15 @@ impl TryFrom<u64> for VariableLengthInteger
     {
         if value <= VARIABLE_LENGTH_U8_MAX as u64
         {
-            Self::try_from(value as u8)
+            Ok(Self::from(value as u8))
         }
         else if value <= VARIABLE_LENGTH_U16_MAX as u64
         {
-            Self::try_from(value as u16)
+            Ok(Self::from(value as u16))
         }
         else if value <= VARIABLE_LENGTH_U32_MAX as u64
         {
-            Self::try_from(value as u32)
+            Ok(Self::from(value as u32))
         }
         else if value <= VARIABLE_LENGTH_U64_MAX
         {
@@ -156,20 +162,19 @@ impl TryFrom<u64> for VariableLengthInteger
     }
 }
 
-
-/// Defines the interface that all variable length integer types must conform to.
-/// This makes it easier to work with these types, since it is known that regardless of the size
-/// of the current value, the operations that can be performed are the same.
-/// TODO: Split into multiple smaller traits? (i.e., VariableLengthEncode and VariableLengthDecode?)
-///     This would certainly make it easier to tell what TryFrom should be attempting to convert
-///     from.
-pub trait VariableLengthEncodeDecode<T>
+/// All FrameType values supported here are u8 values which fit into at most 5 bits, and thus
+/// conversion to a VariableLengthInteger should never fail, because the 5 bit maximum will
+/// never exceed the 62 bit maximum.
+impl From<FrameType> for VariableLengthInteger
 {
-    fn try_new_from_decoded_value(decoded_value: T) -> anyhow::Result<Self> where Self: Sized;
-    fn new_from_encoded_value(encoded_value: T) -> Self;
-    fn decoded_value(&self) -> T;
-    fn encoded_value(&self) -> T;
+    fn from(value: FrameType) -> Self
+    {
+        // SAFETY: The largest FrameType value supported is FrameType::HandshakeDone is 0x1e = 30,
+        // which ALWAYS fits into less than 62 bits, and so is an infallible conversion.
+        VariableLengthInteger::from(value as u8)
+    }
 }
+
 
 /// From for this can take a decoded value and encode it.
 pub trait VariableLengthEncode<T>
@@ -194,7 +199,7 @@ pub trait VariableLengthDecode<T>
 mod tests
 {
     use anyhow::anyhow;
-    use crate::variable_length_integer::{VariableLengthEncodeDecode, VariableLengthInteger};
+    use crate::variable_length_integer::{VariableLengthDecode, VariableLengthEncode, VariableLengthInteger};
     use crate::variable_length_integer::encoded_u8::VARIABLE_LENGTH_U8_MAX;
     use crate::variable_length_integer::encoded_u16::{VARIABLE_LENGTH_U16_BIT_SETTING_MASK, VARIABLE_LENGTH_U16_MAX};
     use crate::variable_length_integer::encoded_u32::{VARIABLE_LENGTH_U32_BIT_SETTING_MASK, VARIABLE_LENGTH_U32_MAX};
@@ -566,4 +571,16 @@ mod tests
 
         Ok(())
     }
+
+    // TODO: Test frame type conversion.
+    // #[test]
+    // fn test_frame_type_conversion() -> anyhow::Result<()>
+    // {
+    //     let padding = FrameType::Padding as u32;
+    //     let ack = FrameType::Ack as u32;
+    //
+    //
+    //
+    //     Ok(())
+    // }
 }

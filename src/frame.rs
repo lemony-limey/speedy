@@ -2,8 +2,32 @@
 // used during by QUIC.
 
 use bytes::Bytes;
+use crate::frame::ack::Ack;
+use crate::frame::ack_with_ecn::AckWithECN;
+use crate::frame::crypto::Crypto;
+use crate::frame::max_data::MaxData;
+use crate::frame::max_stream_data::MaxStreamData;
+use crate::frame::new_token::NewToken;
+use crate::frame::padding::Padding;
+use crate::frame::ping::Ping;
+use crate::frame::reset_stream::ResetStream;
+use crate::frame::stop_sending::StopSending;
+use crate::frame::stream::Stream;
 use crate::quic_stream::StreamID;
 use crate::variable_length_integer::VariableLengthInteger;
+
+pub mod ack;
+pub mod ack_with_ecn;
+pub mod crypto;
+pub mod handshake_done;
+pub mod max_data;
+pub mod max_stream_data;
+pub mod new_token;
+pub mod padding;
+pub mod ping;
+pub mod reset_stream;
+pub mod stop_sending;
+pub mod stream;
 
 pub enum FrameType
 {
@@ -45,76 +69,19 @@ pub enum FrameType
 #[derive(Clone, Debug)]
 pub enum Frame
 {
-    Padding, // type: 0x00, No content
-    Ping,    // type: 0x01, No content
-    Ack      // type: 0x02
-    {
-        largest_acknowledged: VariableLengthInteger,
-        ack_delay:            VariableLengthInteger,  // Delay in microseconds (us).
-        ack_range_count:      VariableLengthInteger,  // Number of ACK range fields in the frame.
-        first_ack_range:      VariableLengthInteger,
-        ack_ranges:           Option<Vec<AckRange>>,  // Length of Vec given by ack_range_count field
-    },
-    AckWithECN  // type: 0x03
-    {
-        largest_acknowledged: VariableLengthInteger,
-        ack_delay:            VariableLengthInteger,  // Delay in microseconds (us).
-        ack_range_count:      VariableLengthInteger,  // Number of ACK range fields in the frame.
-        first_ack_range:      VariableLengthInteger,
-        ack_ranges:           Option<Vec<AckRange>>,  // Length of Vec given by ack_range_count field
-    },
-    ResetStream  // type: 0x04
-    {
-        stream_id:                       VariableLengthInteger,
-        application_protocol_error_code: VariableLengthInteger,
-        final_size:                      VariableLengthInteger,
-    },
-    StopSending  // type: 0x05
-    {
-        stream_id:                       StreamID,
-        application_protocol_error_code: VariableLengthInteger,
-    },
-    // Crypto frames cannot be sent in 0-RTT packets.
-    Crypto  // type: 0x06
-    {
-        offset: VariableLengthInteger,
-        length: VariableLengthInteger,
-        data:   Bytes,
-    },
-    NewToken  // type: 0x07
-    {
-        // Length of the token in bytes
-        token_length: VariableLengthInteger,
-        token:        Bytes,
-    },
-    Stream  // type: (0x08..=0x0f)
-    {
-        // Indicates that there is an Offset field present in this frame.
-        // The OFF bit is 0x04
-        off:       bool,
-        // Indicates that the Length field is present in this frame.
-        // The LEN bit is 0x02
-        len:       bool,
-        // Indicates that this frame marks the end of the stream.
-        // The FIN bit is 0x01
-        fin:       bool,
-        stream_id: StreamID,
-        // Only present if the OFF bit is set
-        offset:    Option<VariableLengthInteger>,
-        // Only present if the LEN bit is set
-        length:    Option<VariableLengthInteger>,
-        data:      Bytes,
-    },
-    MaxData  // type: 0x10
-    {
-        maximum_data: VariableLengthInteger,
-    },
+    Padding(Padding),
+    Ping(Ping),
+    Ack(Ack),
+    AckWithECN(AckWithECN),
+    ResetStream(ResetStream),
+    StopSending(StopSending),
+    // Crypto frames CANNOT be sent in 0-RTT packets.
+    Crypto(Crypto),
+    NewToken(NewToken),
+    Stream(Stream),
+    MaxData(MaxData),
     // Can be sent for streams in the "Recv" state.
-    MaxStreamData  // type: 0x11
-    {
-        stream_id:           StreamID,
-        maximum_stream_data: VariableLengthInteger,
-    },
+    MaxStreamData(MaxStreamData),
     // MaxStreamsBidirectional represents the count of the cumulative number of [bidirectional]
     // streams ... that can be opened over the lifetime of the connection (RFC 9000, Section 19.11).
     MaxStreamsBidirectional  // type: 0x12
@@ -189,12 +156,4 @@ pub struct AckRange
 {
     gap:              VariableLengthInteger,
     ack_range_length: VariableLengthInteger,
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct ECNCounts
-{
-    ect0_count:   VariableLengthInteger,
-    ect1_count:   VariableLengthInteger,
-    ecn_ce_count: VariableLengthInteger,
 }

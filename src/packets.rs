@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use crate::frames::Frame;
+use crate::frame::Frame;
 use crate::variable_length_integer::VariableLengthInteger;
 
 #[derive(Clone, Debug)]
@@ -84,4 +84,14 @@ struct HandshakeHeader
 {
     type_and_length: u32,  // First byte is message type
     // Next 3 bytes are length of ClientHello data
+}
+
+pub trait PacketSerialise
+{
+
+}
+
+pub trait PacketDeserialise
+{
+
 }
