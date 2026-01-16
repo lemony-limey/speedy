@@ -1,5 +1,5 @@
 use crate::frame::FrameType;
-use crate::quic_stream::StreamID;
+use crate::stream::StreamID;
 use crate::variable_length_integer::VariableLengthInteger;
 
 #[derive(Clone, Copy, Debug)]

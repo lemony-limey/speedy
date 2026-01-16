@@ -1,6 +1,6 @@
 use socket2::SockAddr;
 use std::sync::Arc;
-use crate::quic_connection::QuicConnection;
+use crate::connection::Connection;
 use crate::variable_length_integer::VariableLengthInteger;
 
 pub enum StreamType
@@ -14,7 +14,7 @@ pub enum StreamType
 #[derive(Clone, Debug)]
 pub struct RecvStream
 {
-    connection:  Arc<QuicConnection>,
+    connection:  Arc<Connection>,
     stream_id:   VariableLengthInteger,
     local_addr:  SockAddr,
     remote_addr: SockAddr,
@@ -23,7 +23,7 @@ pub struct RecvStream
 #[derive(Clone, Debug)]
 pub struct SendStream
 {
-    connection:  Arc<QuicConnection>,
+    connection:  Arc<Connection>,
     stream_id:   VariableLengthInteger,
     local_addr:  SockAddr,
     remote_addr: SockAddr,

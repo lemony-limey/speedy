@@ -2,7 +2,7 @@ use std::sync::Arc;
 use tokio::net::UdpSocket;
 
 #[derive(Debug)]
-pub struct QuicEndpoint
+pub struct Endpoint
 {
     udp_socket: Arc<UdpSocket>,
 }

@@ -3,18 +3,18 @@ use crate::frame::Frame;
 use crate::variable_length_integer::VariableLengthInteger;
 
 #[derive(Clone, Debug)]
-struct LongHeader
+pub struct LongHeader
 {
     reserved_and_packet_number_length: u8,
-    version:          u32,
-    dest_conn_id_len: u8,
-    dest_conn_id:     Bytes,  // At most 20 bytes
-    src_conn_id_len:  u8,
-    src_conn_id:      Bytes,  // At most 20 bytes
+    version:                           u32,
+    dest_conn_id_len:                  u8,
+    dest_conn_id:                      Bytes,  // At most 20 bytes
+    src_conn_id_len:                   u8,
+    src_conn_id:                       Bytes,  // At most 20 bytes
 }
 
 #[derive(Clone, Debug)]
-struct ShortHeader
+pub struct ShortHeader
 {
     reserved_and_packet_number_length: u8,
     dest_conn_id:                      Bytes,  // At most 20 bytes
@@ -36,7 +36,7 @@ pub enum Packet
     },
     Initial  // 0x00
     {
-        header: LongHeader,
+        header:       LongHeader,
         token_length: VariableLengthInteger,
 
     },
@@ -62,8 +62,6 @@ pub enum Packet
     },
 }
 
-
-#[repr(C)]
 enum HandshakeType
 {
     ClientHello = 1,
@@ -79,19 +77,22 @@ enum HandshakeType
     MessageHash = 254,
 }
 
-#[repr(C)]
+/// HandshakeHeader is defined separately because it has different fields to both the short and
+/// long headers.
 struct HandshakeHeader
 {
     type_and_length: u32,  // First byte is message type
     // Next 3 bytes are length of ClientHello data
 }
 
+/// The serialise method takes a Packet and serialises it into bytes.
 pub trait PacketSerialise
 {
-
+    fn serialise(packet: Packet) -> Bytes;
 }
 
+/// The serialise method takes an incoming byte stream and deserialises it into a packet.
 pub trait PacketDeserialise
 {
-
+    fn serialise(bytes: Bytes) -> Packet;
 }

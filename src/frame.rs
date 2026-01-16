@@ -51,6 +51,7 @@ pub mod streams_blocked_bidirectional;
 pub mod streams_blocked_unidirectional;
 pub mod stream_data_blocked;
 
+#[repr(u8)]
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum FrameType
 {
@@ -115,5 +116,11 @@ pub enum Frame
     PathResponse(PathResponse),
     ConnectionCloseSuccessOrQuicError(ConnectionCloseSuccessOrQuicError),
     ConnectionCloseApplicationError(ConnectionCloseApplicationError),
-    HandshakeDone(HandshakeDone),  // type: 0x1e
+    HandshakeDone(HandshakeDone),
+}
+
+#[cfg(test)]
+mod tests
+{
+
 }
