@@ -5,7 +5,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Debug)]
 pub struct AckWithECN
 {
-    frame_type:           VariableLengthInteger,  // 0x03
+    frame_type:           FrameType,  // 0x03
     largest_acknowledged: VariableLengthInteger,
     ack_delay:            VariableLengthInteger,  // Delay in microseconds (us).
     ack_range_count:      VariableLengthInteger,  // Number of ACK range fields in the frame.
@@ -27,7 +27,7 @@ impl AckWithECN
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::AckWithECN),
+            frame_type: FrameType::AckWithECN,
             largest_acknowledged,
             ack_delay,
             ack_range_count,

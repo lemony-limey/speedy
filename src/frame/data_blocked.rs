@@ -5,7 +5,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Copy, Debug)]
 pub struct DataBlocked
 {
-    frame_type:   VariableLengthInteger,
+    frame_type:   FrameType,
     maximum_data: VariableLengthInteger,
 }
 
@@ -16,7 +16,7 @@ impl DataBlocked
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::DataBlocked),
+            frame_type: FrameType::DataBlocked,
             maximum_data,
         }
     }

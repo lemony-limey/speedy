@@ -1,3 +1,5 @@
+use anyhow::anyhow;
+
 pub(crate) enum SendStreamState
 {
     Ready,
@@ -31,16 +33,13 @@ impl SendFSM
     }
 
     /// Takes an action and moves to the corresponding state.
-    pub fn next_state(&mut self, action: SendStreamAction)
+    pub fn next_state(&mut self, action: SendStreamAction) -> anyhow::Result<&SendStreamState>
     {
-        match action
+        match (&self.current_state, action)
         {
-            SendStreamAction::SendResetStreamFrame => {}
-            SendStreamAction::SendStreamFrame => {}
-            SendStreamAction::SendStreamDataBlockedFrame => {}
-            SendStreamAction::SendStreamAndFinFrames => {}
-            SendStreamAction::ReceiveAllAcks => {}
-            SendStreamAction::ReceiveAck => {}
+
+
+            _ => Err(anyhow!("Invalid state transition")),
         }
     }
 }

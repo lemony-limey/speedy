@@ -21,7 +21,7 @@ pub struct Fin(pub bool);
 #[derive(Clone, Debug)]
 pub struct Stream
 {
-    frame_type: VariableLengthInteger,
+    frame_type: FrameType,
     off:        Off,
     len:        Len,
     fin:        Fin,
@@ -58,7 +58,7 @@ impl Stream
         };
 
         Self {
-            frame_type: VariableLengthInteger::from(frame_type),
+            frame_type,
             off,
             len,
             fin,

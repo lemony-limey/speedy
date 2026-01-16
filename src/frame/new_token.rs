@@ -5,7 +5,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Debug)]
 pub struct NewToken
 {
-    frame_type:   VariableLengthInteger,
+    frame_type:   FrameType,
     // Length of the token in bytes
     token_length: VariableLengthInteger,
     token:        Bytes,
@@ -19,7 +19,7 @@ impl NewToken
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::NewToken),
+            frame_type: FrameType::NewToken,
             token_length,
             token,
         }

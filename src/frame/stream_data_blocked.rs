@@ -5,7 +5,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Copy, Debug)]
 pub struct StreamDataBlocked
 {
-    frame_type:          VariableLengthInteger,
+    frame_type:          FrameType,
     stream_id:           StreamID,
     maximum_stream_data: VariableLengthInteger,
 }
@@ -18,7 +18,7 @@ impl StreamDataBlocked
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::StreamDataBlocked),
+            frame_type: FrameType::StreamDataBlocked,
             stream_id,
             maximum_stream_data,
         }

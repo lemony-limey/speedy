@@ -5,7 +5,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Debug)]
 pub struct NewConnectionID
 {
-    frame_type:            VariableLengthInteger,
+    frame_type:            FrameType,
     sequence_number:       VariableLengthInteger,
     retire_prior_to:       VariableLengthInteger,
     length:                u8,
@@ -24,7 +24,7 @@ impl NewConnectionID
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::NewConnectionID),
+            frame_type: FrameType::NewConnectionID,
             sequence_number,
             retire_prior_to,
             length,

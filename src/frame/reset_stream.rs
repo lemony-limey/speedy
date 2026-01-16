@@ -4,7 +4,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Copy, Debug)]
 pub struct ResetStream
 {
-    frame_type:                      VariableLengthInteger,
+    frame_type:                      FrameType,
     stream_id:                       VariableLengthInteger,
     application_protocol_error_code: VariableLengthInteger,
     final_size:                      VariableLengthInteger,
@@ -19,7 +19,7 @@ impl ResetStream
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::ResetStream),
+            frame_type: FrameType::ResetStream,
             stream_id,
             application_protocol_error_code,
             final_size,

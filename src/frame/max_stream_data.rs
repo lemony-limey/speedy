@@ -6,7 +6,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Debug)]
 pub struct MaxStreamData
 {
-    frame_type:          VariableLengthInteger,
+    frame_type:          FrameType,
     stream_id:           StreamID,
     maximum_stream_data: VariableLengthInteger,
 }
@@ -19,7 +19,7 @@ impl MaxStreamData
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::MaxStreamData),
+            frame_type: FrameType::MaxStreamData,
             stream_id,
             maximum_stream_data,
         }

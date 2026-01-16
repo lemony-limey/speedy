@@ -1,12 +1,12 @@
-use nom::bits::bits;
-use nom::Parser;
-use nom::bits::complete::take;
-use nom::combinator::{map, map_res};
-use nom::error::{Error, ErrorKind};
-use nom::IResult;
-use crate::frame::Frame;
+use crate::frame::{Frame, FrameType};
 use crate::packet::Packet;
-use crate::variable_length_integer::VariableLengthInteger;
+use crate::variable_length_integer::{VariableLengthDecode, VariableLengthInteger};
+use nom::bits::bits;
+use nom::bits::complete::take;
+use nom::combinator::map;
+use nom::error::ErrorKind;
+use nom::IResult;
+use nom::Parser;
 
 /// From: https://blog.adamchalmers.com/nom-bits/
 type BitInput<'a> = (&'a [u8], usize);
@@ -25,41 +25,75 @@ pub fn parse_packet(input: &[u8]) -> anyhow::Result<Packet>
 
 fn parse_frame(input: &[u8]) -> IResult<&[u8], Frame>
 {
-    // Frame type is always the first field, and is encoded as a variable length integer
-    let (remaining_input, VariableLengthInteger::EightBit(frame_type)) = bits(parse_variable_length_integer).parse(input)? else {
-        todo!()
+    // Frame type is always the first field, and is encoded as a variable length integer.
+    let (input, VariableLengthInteger::EightBit(frame_type)) = bits(parse_variable_length_integer).parse(input)? else {
+        // This should only fail if data runs out.
+        return Err(nom::Err::Failure(nom::error::Error { input, code: ErrorKind::Fail }));
     };
 
-    todo!()
+    match FrameType::u8_to_frame_type(frame_type.decoded_value())
+    {
+        FrameType::Padding => Ok((input, Frame::Padding)),
+        FrameType::Ping => Ok((input, Frame::Ping)),
+        FrameType::Ack => unimplemented!(),
+        FrameType::AckWithECN => unimplemented!(),
+        FrameType::ResetStream => unimplemented!(),
+        FrameType::StopSending => unimplemented!(),
+        FrameType::Crypto => unimplemented!(),
+        FrameType::NewToken => unimplemented!(),
+        FrameType::StreamNoneSet => unimplemented!(),
+        FrameType::StreamFin => unimplemented!(),
+        FrameType::StreamLen => unimplemented!(),
+        FrameType::StreamLenFin => unimplemented!(),
+        FrameType::StreamOff => unimplemented!(),
+        FrameType::StreamOffFin => unimplemented!(),
+        FrameType::StreamOffLen => unimplemented!(),
+        FrameType::StreamOffLenFin => unimplemented!(),
+        FrameType::MaxData => unimplemented!(),
+        FrameType::MaxStreamData => unimplemented!(),
+        FrameType::MaxStreamsBidirectional => unimplemented!(),
+        FrameType::MaxStreamsUnidirectional => unimplemented!(),
+        FrameType::DataBlocked => unimplemented!(),
+        FrameType::StreamDataBlocked => unimplemented!(),
+        FrameType::StreamsBlockedBidirectional => unimplemented!(),
+        FrameType::StreamsBlockedUnidirectional => unimplemented!(),
+        FrameType::NewConnectionID => unimplemented!(),
+        FrameType::RetireConnectionID => unimplemented!(),
+        FrameType::PathChallenge => unimplemented!(),
+        FrameType::PathResponse => unimplemented!(),
+        FrameType::ConnectionCloseSuccessOrQuicError => unimplemented!(),
+        FrameType::ConnectionCloseApplicationError => unimplemented!(),
+        FrameType::HandshakeDone => Ok((input, Frame::HandshakeDone)),
+    }
 }
 
 /// Parse a variable length integer from the byte stream.
 fn parse_variable_length_integer(input: BitInput) -> IResult<BitInput, VariableLengthInteger>
 {
     // Get the first two bits
-    let (remaining_input, length) = take_bits_u8(input, 2)?;
+    let (input, length) = take_bits_u8(input, 2)?;
 
     // Parse the rest of the integer depending on the specified length
     match length
     {
         // u8 - Parse the next 6 bits
         0b_00 => {
-            let (remaining_input, value) = take_bits_u8(remaining_input, 6)?;
-            Ok((remaining_input, VariableLengthInteger::from(value)))
+            let (input, value) = take_bits_u8(input, 6)?;
+            Ok((input, VariableLengthInteger::from(value)))
         },
         // u16 - Parse the next 14 bits
         0b_01 => {
-            let (remaining_input, value) = take_bits_u16(remaining_input, 14)?;
-            Ok((remaining_input, VariableLengthInteger::from(value)))
+            let (input, value) = take_bits_u16(input, 14)?;
+            Ok((input, VariableLengthInteger::from(value)))
         },
         // u32 - Parse the next 30 bits
         0b_10 => {
-            let (remaining_input, value) = take_bits_u32(remaining_input, 30)?;
-            Ok((remaining_input, VariableLengthInteger::from(value)))
+            let (input, value) = take_bits_u32(input, 30)?;
+            Ok((input, VariableLengthInteger::from(value)))
         },
         // u64 - Parse the next 62 bits
         0b_11 => {
-            let (remaining_input, value) = take_bits_u64(remaining_input, 62)?;
+            let (input, value) = take_bits_u64(input, 62)?;
 
             // Conversion from 64-bit value to 62 bits is fallible, since 64 bits is the overall
             // maximum.
@@ -67,7 +101,7 @@ fn parse_variable_length_integer(input: BitInput) -> IResult<BitInput, VariableL
                 return Err(nom::Err::Failure(nom::error::Error { input, code: ErrorKind::Fail }))
             };
 
-            Ok((remaining_input, variable_length_integer))
+            Ok((input, variable_length_integer))
         },
         _ => {
             // This should be unreachable.
@@ -79,17 +113,12 @@ fn parse_variable_length_integer(input: BitInput) -> IResult<BitInput, VariableL
 /// Takes one bit from the input, returning true for 1 and false for 0.
 /// This function is a modified version of one of the same name from:
 /// https://blog.adamchalmers.com/nom-bits/
-fn take_bit(input: BitInput) -> IResult<BitInput, bool>
+fn take_bit_bool(input: BitInput) -> IResult<BitInput, bool>
 {
     map(
         take(1usize),
         |bit: u8| bit != 0
     ).parse(input)
-}
-
-fn take_2_bits(input: BitInput) -> IResult<BitInput, u8>
-{
-    take(2usize)(input)
 }
 
 fn take_bits_u8(input: BitInput, number_of_bits: usize) -> IResult<BitInput, u8>
@@ -140,9 +169,9 @@ fn take_bits_u64(input: BitInput, number_of_bits: usize) -> IResult<BitInput, u6
 #[cfg(test)]
 mod tests
 {
-    use nom::Finish;
-    use crate::parser::{parse_variable_length_integer, take_2_bits};
+    use crate::parser::parse_variable_length_integer;
     use crate::variable_length_integer::{VariableLengthDecode, VariableLengthInteger};
+    use nom::Finish;
 
     #[test]
     fn test_variable_length_integer_u8_conversion()

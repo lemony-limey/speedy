@@ -6,7 +6,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Debug)]
 pub struct Crypto
 {
-    frame_type: VariableLengthInteger,
+    frame_type: FrameType,
     offset:     VariableLengthInteger,
     length:     VariableLengthInteger,
     data:       Bytes,
@@ -21,7 +21,7 @@ impl Crypto
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::Crypto),
+            frame_type: FrameType::Crypto,
             offset,
             length,
             data,

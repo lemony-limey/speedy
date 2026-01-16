@@ -6,7 +6,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Copy, Debug)]
 pub struct PathChallenge
 {
-    frame_type: VariableLengthInteger,
+    frame_type: FrameType,
     data:       u64,
 }
 
@@ -15,7 +15,7 @@ impl PathChallenge
     pub fn new(data: u64) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::PathChallenge),
+            frame_type: FrameType::PathChallenge,
             data,
         }
     }

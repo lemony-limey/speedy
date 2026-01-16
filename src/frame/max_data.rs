@@ -4,7 +4,7 @@ use crate::variable_length_integer::VariableLengthInteger;
 #[derive(Clone, Debug)]
 pub struct MaxData
 {
-    frame_type:   VariableLengthInteger,
+    frame_type:   FrameType,
     maximum_data: VariableLengthInteger,
 }
 
@@ -15,7 +15,7 @@ impl MaxData
     ) -> Self
     {
         Self {
-            frame_type: VariableLengthInteger::from(FrameType::MaxData),
+            frame_type: FrameType::MaxData,
             maximum_data,
         }
     }
