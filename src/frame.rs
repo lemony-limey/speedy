@@ -2,7 +2,6 @@
 // used during by QUIC.
 
 use crate::frame::ack::Ack;
-use crate::frame::ack_with_ecn::AckWithECN;
 use crate::frame::connection_close::ConnectionClose;
 use crate::frame::crypto::Crypto;
 use crate::frame::data_blocked::DataBlocked;
@@ -21,7 +20,6 @@ use crate::frame::stream_data_blocked::StreamDataBlocked;
 use crate::frame::streams_blocked::StreamsBlocked;
 
 pub mod ack;
-pub mod ack_with_ecn;
 pub mod connection_close;
 pub mod crypto;
 pub mod data_blocked;
@@ -145,7 +143,7 @@ pub enum Frame
     Padding,
     Ping,
     Ack(Ack),
-    AckWithECN(AckWithECN),
+    AckWithECN(Ack),
     ResetStream(ResetStream),
     StopSending(StopSending),
     Crypto(Crypto),

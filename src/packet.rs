@@ -2,6 +2,12 @@ use bytes::Bytes;
 use crate::frame::Frame;
 use crate::variable_length_integer::VariableLengthInteger;
 
+pub enum Header
+{
+    Long(LongHeader),
+    Short(ShortHeader),
+}
+
 #[derive(Clone, Debug)]
 pub struct LongHeader
 {
@@ -60,6 +66,30 @@ pub enum Packet
         header: ShortHeader,
         frames: Vec<Frame>,
     },
+}
+
+pub(crate) enum PacketType
+{
+    Initial   = 0x00,
+    ZeroRTT   = 0x01,
+    Handshake = 0x02,
+    Retry     = 0x03,
+    VersionNegotiation,
+}
+
+impl PacketType
+{
+    pub(crate) fn get_type_from_u8(value: u8) -> Self
+    {
+        match value
+        {
+            0x00 => PacketType::Initial,
+            0x01 => PacketType::ZeroRTT,
+            0x02 => PacketType::Handshake,
+            0x03 => PacketType::Retry,
+            _    => PacketType::VersionNegotiation,
+        }
+    }
 }
 
 enum HandshakeType

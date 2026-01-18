@@ -45,6 +45,21 @@ pub enum VariableLengthInteger
 }
 
 
+impl Into<u64> for VariableLengthInteger
+{
+    fn into(self) -> u64
+    {
+        match self
+        {
+            VariableLengthInteger::EightBit(value) => u64::from(value.decoded_value()),
+            VariableLengthInteger::SixteenBit(value) => u64::from(value.decoded_value()),
+            VariableLengthInteger::ThirtyTwoBit(value) => u64::from(value.decoded_value()),
+            VariableLengthInteger::SixtyFourBit(value) => value.decoded_value(),
+        }
+    }
+}
+
+
 impl From<u8> for VariableLengthInteger
 {
     fn from(value: u8) -> Self
@@ -62,7 +77,7 @@ impl From<u8> for VariableLengthInteger
         {
             // SAFETY: This call is guaranteed to succeed, because an 8-bit value
             // will always fit into 14 bits.
-            Self::from(value as u16)
+            Self::from(u16::from(value))
         }
     }
 }
@@ -71,7 +86,7 @@ impl From<u16> for VariableLengthInteger
 {
     fn from(value: u16) -> Self
     {
-        if value <= VARIABLE_LENGTH_U8_MAX as u16
+        if value <= VARIABLE_LENGTH_U8_MAX.into()
         {
             Self::from(value as u8)
         }
@@ -88,7 +103,7 @@ impl From<u16> for VariableLengthInteger
         {
             // SAFETY: This call is guaranteed to succeed, because a 16-bit value
             // will always fit into 30 bits.
-            Self::try_from(value as u32)
+            Self::try_from(u32::from(value))
                 .expect("VariableLengthInteger From<u16> as u32: This conversion should be infallible")
         }
     }
@@ -98,11 +113,11 @@ impl From<u32> for VariableLengthInteger
 {
     fn from(value: u32) -> Self
     {
-        if value <= VARIABLE_LENGTH_U8_MAX as u32
+        if value <= VARIABLE_LENGTH_U8_MAX.into()
         {
             Self::from(value as u8)
         }
-        else if value <= VARIABLE_LENGTH_U16_MAX as u32
+        else if value <= VARIABLE_LENGTH_U16_MAX.into()
         {
             Self::from(value as u16)
         }
@@ -120,7 +135,7 @@ impl From<u32> for VariableLengthInteger
         {
             // SAFETY: This conversion is infallible, because a 32-bit value
             //      will always fit into 62 bits.
-            Self::try_from(value as u64)
+            Self::try_from(u64::from(value))
                 .expect("VariableLengthInteger From<u32> as u64: This conversion should be infallible")
         }
     }
@@ -132,15 +147,15 @@ impl TryFrom<u64> for VariableLengthInteger
 
     fn try_from(value: u64) -> Result<Self, Self::Error>
     {
-        if value <= VARIABLE_LENGTH_U8_MAX as u64
+        if value <= VARIABLE_LENGTH_U8_MAX.into()
         {
             Ok(Self::from(value as u8))
         }
-        else if value <= VARIABLE_LENGTH_U16_MAX as u64
+        else if value <= VARIABLE_LENGTH_U16_MAX.into()
         {
             Ok(Self::from(value as u16))
         }
-        else if value <= VARIABLE_LENGTH_U32_MAX as u64
+        else if value <= VARIABLE_LENGTH_U32_MAX.into()
         {
             Ok(Self::from(value as u32))
         }
@@ -148,6 +163,42 @@ impl TryFrom<u64> for VariableLengthInteger
         {
             Ok(VariableLengthInteger::SixtyFourBit(
                 VariableLengthEncodedU64::try_new_from_decoded_value(value)?
+            ))
+        }
+        else  // Too large to be stored as a QUIC variable-length integer.
+        {
+            Err(anyhow!(
+                "Cannot store {} as a variable-length integer, as it it larger than \
+                    the maximum accepted value: {}",
+                value,
+                VARIABLE_LENGTH_U64_MAX,
+            ))
+        }
+    }
+}
+
+impl TryFrom<usize> for VariableLengthInteger
+{
+    type Error = anyhow::Error;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error>
+    {
+        if value <= VARIABLE_LENGTH_U8_MAX.into()
+        {
+            Ok(Self::from(value as u8))
+        }
+        else if value <= VARIABLE_LENGTH_U16_MAX.into()
+        {
+            Ok(Self::from(value as u16))
+        }
+        else if value <= VARIABLE_LENGTH_U32_MAX as usize
+        {
+            Ok(Self::from(value as u32))
+        }
+        else if value <= VARIABLE_LENGTH_U64_MAX as usize
+        {
+            Ok(VariableLengthInteger::SixtyFourBit(
+                VariableLengthEncodedU64::try_new_from_decoded_value(value as u64)?
             ))
         }
         else  // Too large to be stored as a QUIC variable-length integer.

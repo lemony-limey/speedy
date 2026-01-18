@@ -14,6 +14,17 @@ pub struct MaxStreams
 
 impl MaxStreams
 {
+    pub fn new(
+        frame_type:      FrameType,
+        maximum_streams: VariableLengthInteger,
+    ) -> Self
+    {
+        Self {
+            frame_type,
+            maximum_streams,
+        }
+    }
+
     pub fn new_bidirectional(maximum_streams: VariableLengthInteger) -> Self
     {
         Self {
