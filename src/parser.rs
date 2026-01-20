@@ -1,12 +1,10 @@
 use nom::{IResult, Parser};
-use nom::bits::bits;
-use nom::combinator::peek;
-use crate::packet::{Header, Packet, PacketType};
+use crate::packet::{Packet, PacketType};
 use crate::parser::bits::{take_bit_bool, take_bits_u8};
 
 pub(crate) mod bits;
-pub(crate) mod frames;
-pub(crate) mod headers;
+pub(crate) mod frame;
+pub(crate) mod header;
 pub(crate) mod variable_length_integer;
 
 
@@ -43,7 +41,6 @@ pub fn parse_packet(input: BitInput) -> IResult<BitInput, Packet>
     }
     else  // Short Header (header_form = 0)
     {
-
         parse_1rtt_packet(input)
     }
 }

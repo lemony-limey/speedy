@@ -15,7 +15,7 @@ pub enum StreamType
 pub struct RecvStream
 {
     connection:  Arc<Connection>,
-    stream_id:   VariableLengthInteger,
+    stream_id:   StreamID,
     local_addr:  SockAddr,
     remote_addr: SockAddr,
 }
@@ -24,10 +24,10 @@ pub struct RecvStream
 pub struct SendStream
 {
     connection:  Arc<Connection>,
-    stream_id:   VariableLengthInteger,
+    stream_id:   StreamID,
     local_addr:  SockAddr,
     remote_addr: SockAddr,
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct StreamID(VariableLengthInteger);
+pub struct StreamID(pub VariableLengthInteger);

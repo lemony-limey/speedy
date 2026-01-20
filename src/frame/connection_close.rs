@@ -9,6 +9,7 @@ pub struct ConnectionClose
     // Application Error:  0x1d
     frame_type:           FrameType,
     error_code:           VariableLengthInteger,
+    // error_frame_type is None if frame_type is 0x1d (application error)
     error_frame_type:     Option<VariableLengthInteger>,
     reason_phrase_length: VariableLengthInteger,
     reason_phrase:        Bytes,

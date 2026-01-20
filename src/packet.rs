@@ -30,7 +30,7 @@ pub struct ShortHeader
 #[derive(Clone, Debug)]
 pub enum Packet
 {
-    VersionNegotiation
+    VersionNegotiation  // Only ever sent by servers
     {
         form_and_unused:   u8,
         version:           u32,   // Must be set to 0
@@ -54,7 +54,10 @@ pub enum Packet
     Handshake  // 0x02
     {
         header: LongHeader,
-
+        /// Contains Crypto frames, may contain Ping, Padding,
+        /// Ack or ConnectionClose frames also.
+        /// Anything else should result in a ProtocolViolation error.
+        frames: Vec<Frame>,
     },
     Retry  // 0x03
     {
@@ -113,16 +116,4 @@ struct HandshakeHeader
 {
     type_and_length: u32,  // First byte is message type
     // Next 3 bytes are length of ClientHello data
-}
-
-/// The serialise method takes a Packet and serialises it into bytes.
-pub trait PacketSerialise
-{
-    fn serialise(packet: Packet) -> Bytes;
-}
-
-/// The serialise method takes an incoming byte stream and deserialises it into a packet.
-pub trait PacketDeserialise
-{
-    fn serialise(bytes: Bytes) -> Packet;
 }

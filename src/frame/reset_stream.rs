@@ -1,11 +1,12 @@
 use crate::frame::FrameType;
+use crate::stream::StreamID;
 use crate::variable_length_integer::VariableLengthInteger;
 
 #[derive(Clone, Copy, Debug)]
 pub struct ResetStream
 {
     frame_type:                      FrameType,
-    stream_id:                       VariableLengthInteger,
+    stream_id:                       StreamID,
     application_protocol_error_code: VariableLengthInteger,
     final_size:                      VariableLengthInteger,
 }
@@ -13,7 +14,7 @@ pub struct ResetStream
 impl ResetStream
 {
     pub fn new(
-        stream_id:                       VariableLengthInteger,
+        stream_id:                       StreamID,
         application_protocol_error_code: VariableLengthInteger,
         final_size:                      VariableLengthInteger,
     ) -> Self
