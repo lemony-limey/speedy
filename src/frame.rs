@@ -1,6 +1,7 @@
 // This module contains the definitions for various types of frames that will be
 // used during by QUIC.
 
+use bytes::Bytes;
 use crate::frame::ack::Ack;
 use crate::frame::connection_close::ConnectionClose;
 use crate::frame::crypto::Crypto;
@@ -164,6 +165,14 @@ pub enum Frame
     ConnectionCloseSuccessOrQuicError(ConnectionClose),
     ConnectionCloseApplicationError(ConnectionClose),
     HandshakeDone,
+}
+
+impl Frame
+{
+    pub(crate) fn serialise(&self) -> Bytes
+    {
+        todo!()
+    }
 }
 
 

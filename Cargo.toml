@@ -11,7 +11,7 @@ name = "server-1"
 
 [dependencies]
 anyhow = "1.0.100"
-bytes = "1.11.0"
+bytes = "1.11.1"
 clap = { version = "4.5.54", features = ["derive"] }
 clap_derive = "4.5.40"
 nom = "8.0.0"

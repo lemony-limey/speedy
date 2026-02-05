@@ -67,7 +67,8 @@ pub(crate) fn parse_frame(input: BitInput) -> IResult<BitInput, Frame>
             | FrameType::StreamLen    | FrameType::StreamLenFin
             | FrameType::StreamOff    | FrameType::StreamOffFin
             | FrameType::StreamOffLen | FrameType::StreamOffLenFin => {
-
+            let (input, frame) = parse_stream(input)?;
+            Ok((input, Frame::Stream(frame)))
         },
         FrameType::MaxData => {
             let (input, frame) = parse_max_data(input)?;
@@ -415,10 +416,11 @@ fn parse_stream(input: BitInput) -> IResult<BitInput, Stream>
         (input, Some(length), data)
     } else {
         // If the LEN bit is set to 0, the data field consumes all remaining bytes in the packet.
-        // let data = Bytes::new();
+        // let data = input.;
+        let (input_bytes, _bit_position) = input;
+        let data = Bytes::copy_from_slice(input_bytes);
 
-        // (input, None, )
-        // todo!()
+        (("".as_bytes(), 0), None, data)
     };
 
     Ok((
@@ -460,4 +462,10 @@ fn parse_stream_id(input: BitInput) -> IResult<BitInput, StreamID>
 {
     let (input, stream_id) = parse_variable_length_integer(input)?;
     Ok((input, StreamID(stream_id)))
+}
+
+#[cfg(test)]
+mod tests
+{
+
 }
