@@ -1,5 +1,5 @@
 # speedy
-A Rust implementation of the QUIC protocol.
+A Rust implementation of the QUIC protocol. It is still in progress! (Packet deserialisation coming soon)
 
 # Anatomy of QUIC
 QUIC is a transport-layer protocol that runs over UDP.
